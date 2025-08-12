@@ -11,16 +11,16 @@
     "type": "git"
   },
   "scripts": {
-    "start": "bun tsc --noEmit --watch",
-    "dev": "bun run test:watch",
-    "build": "bun tsc",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "format": "bun prettier --write .",
-    "lint": "bun oxlint --fix",
-    "typecheck": "bun tsc --noEmit",
-    "prepare": "bun husky",
-    "prepublishOnly": "bun run build"
+    "start": "npx bun tsc --noEmit --watch",
+    "dev": "npx bun run test:watch",
+    "build": "npx bun tsc",
+    "test": "npx bun test",
+    "test:watch": "npx bun test --watch",
+    "format": "npx bun prettier --write .",
+    "lint": "npx bun oxlint --fix",
+    "typecheck": "npx bun tsc --noEmit",
+    "prepare": "npx bun husky",
+    "prepublishOnly": "npx bun run build"
   },
   "keywords": [
     "translation",
