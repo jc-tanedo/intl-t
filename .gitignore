@@ -1,5 +1,4 @@
 .DS_Store
 bun.lock*
 *lock.json
-dist
 node_modules

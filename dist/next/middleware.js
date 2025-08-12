@@ -1,39 +1,18 @@
-import { MiddlewareConfig as MG, NextFetchEvent, NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { negotiator } from "../tools/negotiator";
-import { I18NDomains } from "next/dist/server/config-shared";
 import { match } from "../tools/match";
-import { ResolveConfig } from "../tools/resolvers";
 import { LOCALE_HEADERS_KEY, PATH_HEADERS_KEY } from "./headers";
-import type { Locale } from "../locales/types";
-
 export const LOCALE_COOKIE_KEY = "locale";
-
-export type Middleware = (req: NextRequest, ev: NextFetchEvent, res?: NextResponse) => NextResponse | Promise<NextResponse> | undefined;
-export type MiddlewareFactory = (middleware: Middleware) => Middleware;
-
-export interface MiddlewareConfig<L extends Locale> extends MG, ResolveConfig<L> {
-  pathBase?: "always-default" | "detect-default" | "detect-latest" | "always-detect";
-  strategy?: "domain" | "param" | "headers";
-  detect?: false | string | string[] | ((req: NextRequest) => string[] | string);
-  domains?: I18NDomains;
-  config?: MG;
-  middleware?: Middleware;
-  withMiddleware?: MiddlewareFactory;
-  match?: typeof match;
-}
-
-export const middlewareConfig: MG = {
+export const middlewareConfig = {
   matcher: ["/((?!api|.*\\..*|_next).*)"],
 };
-
 // @ts-ignore
-export function detect(req: NextRequest, domains: I18NDomains = this?.domains || []) {
+export function detect(req, domains = this?.domains || []) {
   const { hostname } = req.nextUrl;
   const domain = domains.find(d => hostname.includes(d.domain));
   return [domain?.defaultLocale || "", ...(domain?.locales || [])];
 }
-
-export function createMiddleware<L extends Locale>(settings: MiddlewareConfig<L>) {
+export function createMiddleware(settings) {
   settings.config = middlewareConfig;
   settings.middleware = middleware.bind(settings);
   settings.withMiddleware = withMiddleware.bind(settings);
@@ -41,8 +20,7 @@ export function createMiddleware<L extends Locale>(settings: MiddlewareConfig<L>
   settings.domains && (settings.detect ??= detect.bind(settings));
   return Object.assign(settings.middleware, settings, middlewareConfig);
 }
-
-export function middleware<L extends Locale>(req: NextRequest, ev: NextFetchEvent, res?: NextResponse) {
+export function middleware(req, ev, res) {
   let {
     allowedLocales = [],
     defaultLocale = allowedLocales[0],
@@ -53,16 +31,16 @@ export function middleware<L extends Locale>(req: NextRequest, ev: NextFetchEven
     redirectPath = "r",
     match = () => "",
     // @ts-ignore
-  } = this as MiddlewareConfig<L>;
+  } = this;
   res ||= NextResponse.next();
   const { nextUrl, cookies } = req;
   let url = nextUrl.clone();
-  let [, locale, ...path] = nextUrl.pathname.split("/") as string[];
-  if (!allowedLocales.includes(locale as L)) {
+  let [, locale, ...path] = nextUrl.pathname.split("/");
+  if (!allowedLocales.includes(locale)) {
     if (locale == redirectPath) ((pathBase = "detect-latest"), (pathPrefix = "always"), (strategy = "param"), (res = undefined));
     else path.unshift(locale);
     if (pathBase == "always-default") locale = defaultLocale;
-    else if (pathBase == "always-detect" || !(locale = cookies.get(LOCALE_COOKIE_KEY)?.value as string))
+    else if (pathBase == "always-detect" || !(locale = cookies.get(LOCALE_COOKIE_KEY)?.value))
       locale = match(typeof detect != "function" ? detect || null : detect(req));
     else if (pathBase == "detect-default") locale = defaultLocale;
     else locale ||= defaultLocale;
@@ -82,16 +60,13 @@ export function middleware<L extends Locale>(req: NextRequest, ev: NextFetchEven
   res.cookies.set(LOCALE_COOKIE_KEY, locale);
   return res;
 }
-
 export const i18nMiddleware = middleware;
-
-export function withMiddleware(middleware: Middleware) {
+export function withMiddleware(middleware) {
   // @ts-ignore
   const i18nMiddlewareBound = i18nMiddleware.bind(this);
-  return (req: NextRequest, ev: NextFetchEvent, res?: NextResponse) => {
+  return (req, ev, res) => {
     res = i18nMiddlewareBound(req, ev, res);
     return middleware(req, ev, res);
   };
 }
-
 export { withMiddleware as withI18nMiddleware };
